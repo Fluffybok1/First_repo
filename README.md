@@ -1,2 +1,2 @@
 # First_repo
-How to do use github?
+How to use GitHub?
