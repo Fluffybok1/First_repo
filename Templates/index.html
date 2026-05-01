@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Calculator</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at top, #1d2f60 0%, #050916 55%, #000 100%);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(2px 2px at 20% 30%, #eee, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 60% 70%, #fff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 50% 50%, #ddd, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 80% 10%, #fff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 90% 60%, #eee, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 30% 80%, #fff, rgba(0,0,0,0));
+            background-repeat: repeat;
+            background-size: 200% 200%;
+            opacity: 0.5;
+            animation: twinkle 8s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.8; }
+        }
+
+        .calculator {
+            width: 320px;
+            background: rgba(5, 15, 40, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 30px;
+            padding: 24px;
+            box-shadow: 0 0 80px rgba(30, 120, 255, 0.18), inset 0 0 30px rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 2;
+        }
+
+        .display {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 22px;
+            padding: 18px;
+            margin-bottom: 18px;
+            min-height: 110px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.04);
+        }
+
+        .history {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.75);
+            text-align: right;
+            min-height: 24px;
+            word-break: break-all;
+        }
+
+        #display {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: right;
+            letter-spacing: 0.02em;
+            min-height: 48px;
+            color: #ffffff;
+        }
+
+        button {
+            width: 60px;
+            height: 58px;
+            margin: 5px 5px;
+            border: none;
+            border-radius: 18px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #f7fbff;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+            box-shadow: 0 16px 28px rgba(0, 0, 0, 0.25);
+            background: linear-gradient(145deg, #11264f, #081026);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 30px rgba(0, 0, 0, 0.28);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 10px 18px rgba(0, 0, 0, 0.22);
+        }
+
+        .op {
+            background: linear-gradient(145deg, #ffb347, #ff6f91);
+            color: #111;
+        }
+
+        .eq {
+            background: linear-gradient(145deg, #41d3ff, #1f8cff);
+            color: #fff;
+        }
+
+        .clr {
+            background: linear-gradient(145deg, #f43f5e, #9b1c4a);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+<div class="calculator">
+    <div class="display">
+        <div id="history" class="history"></div>
+        <div id="display"></div>
+    </div>
+
+    <button onclick="press('7')">7</button>
+    <button onclick="press('8')">8</button>
+    <button onclick="press('9')">9</button>
+    <button class="op" onclick="press('/')">/</button><br>
+
+    <button onclick="press('4')">4</button>
+    <button onclick="press('5')">5</button>
+    <button onclick="press('6')">6</button>
+    <button class="op" onclick="press('*')">*</button><br>
+
+    <button onclick="press('1')">1</button>
+    <button onclick="press('2')">2</button>
+    <button onclick="press('3')">3</button>
+    <button class="op" onclick="press('-')">-</button><br>
+
+    <button onclick="press('0')">0</button>
+    <button onclick="press('.')">.</button>
+    <button class="eq" onclick="calculate()">=</button>
+    <button class="op" onclick="press('+')">+</button><br>
+
+    <button onclick="press('(')">(</button>
+    <button onclick="press(')')">)</button>
+    <button onclick="press('^')">^</button>
+    <button onclick="backspace()">⌫</button>
+    <button class="clr" onclick="reset()">C</button>
+</div>
+
+<script>
+let expr = ""
+let justCalculated = false
+let lastOperator = null
+let lastResult = null
+let waitingForResult = false
+let bufferedExpr = null
+let historyText = ""
+
+function updateDisplay() {
+    document.getElementById("history").textContent = historyText
+    document.getElementById("display").textContent = expr || ""
+}
+
+function extractLastOperator(expression) {
+    const match = expression.match(/[+\-*/^](?=[^+\-*/^]*$)/)
+    return match ? match[0] : null
+}
+
+function applyBufferedExpr(result) {
+    if (!bufferedExpr) {
+        expr = result.toString()
+        updateDisplay()
+        justCalculated = true
+        return
+    }
+
+    if (/^[+\-*/^]/.test(bufferedExpr)) {
+        expr = result.toString() + bufferedExpr
+    } else if (lastOperator) {
+        expr = result.toString() + lastOperator + bufferedExpr
+    } else {
+        expr = bufferedExpr
+    }
+
+    updateDisplay()
+    justCalculated = false
+    bufferedExpr = null
+}
+
+function hasDotInCurrentNumber() {
+    const currentNumber = expr.split(/[^0-9.]/).pop()
+    return currentNumber.includes('.')
+}
+
+function press(val) {
+    if (waitingForResult) {
+        bufferedExpr = bufferedExpr === null ? val : bufferedExpr + val
+        return
+    }
+
+    if (justCalculated && /[0-9.]/.test(val)) {
+        if (lastOperator) {
+            expr = expr + lastOperator + val
+        } else {
+            expr = val
+        }
+        updateDisplay()
+        justCalculated = false
+        return
+    }
+
+    if (justCalculated && /[+\-*/^]/.test(val)) {
+        expr = expr + val
+        updateDisplay()
+        justCalculated = false
+        return
+    }
+
+    if (val === '.' && hasDotInCurrentNumber()) {
+        return
+    }
+
+    expr += val
+    updateDisplay()
+    justCalculated = false
+}
+
+function backspace() {
+    if (waitingForResult) {
+        bufferedExpr = bufferedExpr === null ? null : bufferedExpr.slice(0, -1)
+        return
+    }
+
+    if (expr.length === 0) {
+        return
+    }
+    expr = expr.slice(0, -1)
+    updateDisplay()
+}
+
+function reset() {
+    expr = ""
+    historyText = ""
+    document.getElementById("display").textContent = ""
+    justCalculated = false
+    lastOperator = null
+    bufferedExpr = null
+    waitingForResult = false
+    updateDisplay()
+}
+
+function calculate() {
+    lastOperator = extractLastOperator(expr)
+    waitingForResult = true
+    bufferedExpr = null
+
+    fetch("/calculate", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ expression: expr })
+    })
+    .then(res => res.json())
+    .then(data => {
+        waitingForResult = false
+
+        if (data.error) {
+            expr = ''
+            historyText = ''
+            document.getElementById("display").textContent = 'Error'
+            document.getElementById("history").textContent = ''
+            justCalculated = false
+            return
+        }
+
+        historyText = expr + ' ='
+        lastResult = data.result
+        expr = data.result.toString()
+        justCalculated = true
+        updateDisplay()
+    })
+}
+
+document.addEventListener("keydown", function(event) {
+    const key = event.key
+
+    if (key === "Backspace") {
+        event.preventDefault()
+        backspace()
+        return
+    }
+
+    if (key === "Enter" || key === "=") {
+        event.preventDefault()
+        calculate()
+        return
+    }
+
+    if (key === "Escape" || key.toLowerCase() === "c") {
+        event.preventDefault()
+        reset()
+        return
+    }
+
+    if (/[0-9]/.test(key) || "+-*/^().".includes(key)) {
+        event.preventDefault()
+        press(key)
+    }
+})
+
+updateDisplay()
+</script>
+
+</body>
+</html>
